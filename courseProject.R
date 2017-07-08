@@ -38,12 +38,11 @@ which(NApercentages>0.90) ##see the features that are to be excluded from the an
 newtraining <- subset(newtraining, select = -c(which(NApercentages>0.90)) )
 
 ##Removefeatures with non zero variability
-nsc<-nearZeroVar(newtraining,saveMetrics = TRUE) ## 
+nsc<-nearZeroVar(newtraining,saveMetrics = TRUE)  
 newtraining <- newtraining[,nsc$nzv==FALSE]
 
-##See what variables are categorical
-catvar<-sapply(newtraining,class) ## except form the classe which is the output variable 
-                                  ##only user_name is also categorical therefore this variable will be transformed
+##See what variables are categorical (except classe)
+catvar<-sapply(newtraining,class) 
 
 ##table(newtraining$user_name) ## exploring the user_name variable
 

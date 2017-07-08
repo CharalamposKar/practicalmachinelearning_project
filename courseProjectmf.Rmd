@@ -1,0 +1,190 @@
+---
+title: "Practical_Machine_Learning"
+author: "Charalampos Karyotis"
+date: "8 July 2017"
+output: html_document
+---
+
+### Practical Machine Learning 
+
+
+####Loading required libraries
+
+```{r}
+library(lattice)
+library(ggplot2)
+library(caret)
+library(rpart)
+library(rattle)
+library(randomForest)
+
+```
+#### Loading the training set. Working directory must be set approprietly
+
+```{r}
+ training<-read.csv("pml-training.csv")
+```
+
+
+#####You can see some details concerning the training set by using the following commands
+#####dim(training)  
+#####head(training)  
+#####summary(training)
+
+
+###Create data partition 70% training and 30% testing
+####The testing set provided will be used for validating the  model 
+
+```{r}
+set.seed(333);
+inTrain<-createDataPartition(training$classe,p=0.70,list=FALSE)
+newtraining<-training[inTrain,] 
+newtesting<-training[-inTrain,]
+```
+
+###Data Preprocessing
+
+
+####Preprocessing includes removing features with high NA percentage
+####Remove features with zero variability
+####Normalize
+####Remove features that are irrelevant such as ,counters, timestampts,dates etc...
+####There were a lot of features and samples so reducing the original number 
+####and cleaning the dat would be very beneficial. 
+
+
+####See the percentage of NA values for every feature 
+
+```{r}
+NApercentages<-apply(newtraining, 2, function(col)sum(is.na(col))/length(col))
+which(NApercentages>0.90) ##see the features that are to be excluded from the analysis
+```
+
+####Remove features with NA percentage more than 90%
+
+```{r}
+newtraining <- subset(newtraining, select = -c(which(NApercentages>0.90)) ) 
+```
+
+
+####Removefeatures with non zero variability
+```{r}
+nsc<-nearZeroVar(newtraining,saveMetrics = TRUE)  
+newtraining <- newtraining[,nsc$nzv==FALSE] 
+```
+
+
+####See what variables are categorical (except classe)
+```{r}
+catvar<-sapply(newtraining,class) 
+```
+
+
+#####Use the following command to explore user_name variable
+#####table(newtraining$user_name)
+
+
+
+####Remove all irrelevant inputs
+#####Remove the first column  which is a count variable and the date and time columns
+
+```{r}
+newtraining<-newtraining[,-c(1,3,4,5,6)] 
+```
+
+
+####Normalize
+
+```{r}
+preobj<-preProcess(newtraining[,-54],method = c("center","scale"))
+newtraining1<-predict(preobj,newtraining[,-54]) 
+newtraining<-cbind(newtraining1,newtraining[,54])
+colnames(newtraining)[54] <- "classe" 
+```
+
+
+####Train a classification tree 
+
+```{r}
+set.seed(333);
+modelFit<-train(classe~.,method="rpart",data=newtraining) 
+```
+
+
+##### Tree structure
+
+```{r}
+fancyRpartPlot(modelFit$finalModel)
+```
+
+
+####Train random forest (Takes a lot of time aprox 12 hours..... please use with caution)
+#####I have saved in my working directory a trained model so that I can run this script without retraining....
+#####If yu want to train the model use the following commands
+#####set.seed(333);
+#####modelFit2<-train(classe~.,method="rf",data=newtraining,prox=TRUE)
+
+```{r}
+load("my_model1.rda")
+```
+
+
+####Tranform testing set using the same steps as with the training set 
+
+```{r}
+usedfeatures <- colnames(newtraining)
+newtesting<-newtesting[usedfeatures]
+dim(newtesting)
+newtesting1<-predict(preobj,newtesting[,-54])
+newtesting<-cbind(newtesting1,newtesting$classe)
+colnames(newtesting)[54] <- "classe"
+```
+
+
+####Calculate accuracy using testing set
+
+
+####Random Forest accuracy
+
+```{r}
+predictions2<-predict(modelFit2,newdata=newtraining)
+CM22<-confusionMatrix(predictions2,newtraining$classe)
+CM22
+```
+
+
+####Simple classification tree accuracy
+
+```{r}
+predictions<-predict(modelFit,newdata=newtesting)
+CM2<-confusionMatrix(predictions,newtesting$classe)
+CM2
+```
+
+
+####Calculate predictions at the validation set 
+
+
+#### Transforming the input to match the input for the models constructed
+
+```{r}
+validation<-read.csv("pml-testing.csv")
+usedfeatures3<-usedfeatures[1:53]
+newvalidation<-validation[usedfeatures3]
+newvalidation<-predict(preobj,newvalidation) 
+predictionsval<-predict(modelFit,newdata=newvalidation)
+predictions2val<-predict(modelFit2,newdata=newvalidation)
+```
+
+
+##### Random forest was the most accurate model at the testing set 
+##### therefore this model will be used to estimate the values for the validation set
+##### The out of sample accuracy would be close to the one calculated
+##### of the testing set for the random forest model and the classification results
+##### as follows 
+
+
+```{r}
+predictions2val
+```
+
