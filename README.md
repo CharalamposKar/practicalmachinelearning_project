@@ -1,3 +1,3 @@
 # practicalmachinelearning_project 
 
-Please find attached an html file that includes the analysis and the corresponding r code
+Please find attached τηε html and rmd files that contain the analysis. I also include the corresponding r code
